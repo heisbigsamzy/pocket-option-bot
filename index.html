@@ -34,13 +34,14 @@
             <hr style="border: 0; border-top: 1px solid #334155; margin: 20px 0;">
             <p><strong>Trade Expiration Target:</strong> <span id="duration" style="color: #38bdf8; font-size: 1.2rem; font-weight: bold;">2 Minutes</span></p>
             <p><strong>Confidence:</strong> <span id="confidence">0%</span></p>
-            <p><strong>RSI (14):</strong> <span id="rsi">--</span></p>
+            <p><strong>RSI (10):</strong> <span id="rsi">--</span></p>
             <p><strong>Latest Price:</strong> <span id="price">--</span></p>
         </div>
     </div>
 
     <script>
-        const ws = new WebSocket('ws://localhost:8080');
+        // Connecting to your live Render server over WSS
+        const ws = new WebSocket('wss://pocket-option-bot-knvh.onrender.com');
         const statusEl = document.getElementById('status');
         const signalEl = document.getElementById('signal');
         const confidenceEl = document.getElementById('confidence');
