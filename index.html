@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pocket Option Signal Bot Terminal</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #1e293b; border-radius: 8px; margin-bottom: 20px; }
+        .status { padding: 6px 12px; border-radius: 4px; font-weight: bold; background: #ef4444; color: white; }
+        .status.connected { background: #22c55e; }
+        .card { background: #1e293b; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+        .signal-box { font-size: 2.5rem; font-weight: bold; text-align: center; padding: 20px; border-radius: 8px; background: #334155; margin-top: 10px; }
+        .call { background: #15803d; color: #fff; box-shadow: 0 0 20px rgba(34, 197, 94, 0.4); }
+        .put { background: #b91c1c; color: #fff; box-shadow: 0 0 20px rgba(239, 68, 68, 0.4); }
+        .neutral { background: #475569; color: #cbd5e1; }
+        .timer-highlight { color: #facc15; font-size: 1.5rem; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Pocket Option Trading Bot Dashboard (2-Min Strategy)</h2>
+            <div id="status" class="status">Disconnected</div>
+        </div>
+
+        <div class="card">
+            <h3>Live Market Signal (EUR/USD OTC)</h3>
+            <div id="signal" class="signal-box neutral">WAITING FOR SETUP...</div>
+            <p style="text-align: center; margin-top: 15px;">
+                <strong>Entry Window Countdown:</strong> <span id="countdown" class="timer-highlight">00s</span>
+            </p>
+            <hr style="border: 0; border-top: 1px solid #334155; margin: 20px 0;">
+            <p><strong>Trade Expiration Target:</strong> <span id="duration" style="color: #38bdf8; font-size: 1.2rem; font-weight: bold;">2 Minutes</span></p>
+            <p><strong>Confidence:</strong> <span id="confidence">0%</span></p>
+            <p><strong>RSI (14):</strong> <span id="rsi">--</span></p>
+            <p><strong>Latest Price:</strong> <span id="price">--</span></p>
+        </div>
+    </div>
+
+    <script>
+        const ws = new WebSocket('ws://localhost:8080');
+        const statusEl = document.getElementById('status');
+        const signalEl = document.getElementById('signal');
+        const confidenceEl = document.getElementById('confidence');
+        const rsiEl = document.getElementById('rsi');
+        const priceEl = document.getElementById('price');
+        const countdownEl = document.getElementById('countdown');
+        const durationEl = document.getElementById('duration');
+
+        ws.onopen = () => {
+            statusEl.textContent = 'Connected to Server';
+            statusEl.classList.add('connected');
+        };
+
+        ws.onclose = () => {
+            statusEl.textContent = 'Disconnected';
+            statusEl.classList.remove('connected');
+        };
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'TICK_UPDATE') {
+                const analysis = data.analysis;
+                priceEl.textContent = data.candle.close;
+                rsiEl.textContent = analysis.rsi;
+                confidenceEl.textContent = analysis.confidence;
+                durationEl.textContent = analysis.trade_duration || "2 Minutes";
+
+                signalEl.textContent = analysis.signal;
+                signalEl.className = 'signal-box ' + analysis.signal.toLowerCase();
+
+                if (analysis.entry_countdown > 0 && analysis.signal !== "NEUTRAL") {
+                    countdownEl.textContent = `${analysis.entry_countdown}s (PREPARE 2-MIN ENTRY!)`;
+                    countdownEl.style.color = "#22c55e";
+                } else {
+                    countdownEl.textContent = "Scanning for next setup...";
+                    countdownEl.style.color = "#facc15";
+                }
+            }
+        };
+    </script>
+</body>
+</html>
