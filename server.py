@@ -3,6 +3,42 @@ Pocket Option Signal Bot Terminal - Nigerian Time (WAT) 15-Second Engine
 Calculates precise entry and close timestamps in WAT (UTC+1).
 """
 
+import asyncio
+import json
+import logging
+import os
+import datetime
+import websockets
+import pandas as pd
+import ta
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger("PO_Server")
+
+CONNECTED_CLIENTS = set()
+candle_history = []
+
+def get_wat_time():
+    # West Africa Time (WAT) is UTC+1
+    wat_offset = datetime.timezone(datetime.timedelta(hours=1))
+    return datetime.datetime.now(wat_offset)
+
+async def broadcast_to_dashboards(message):
+    if CONNECTED_CLIENTS:
+        await asyncio.gather(*[client.send(json.dumps(message)) for client in CONNECTED_CLIENTS])
+
+async def dashboard_socket_handler(websocket):
+    CONNECTED_CLIENTS.add(websocket)
+    logger.info(f"New Dashboard connected! Total clients: {len(CONNECTED_CLIENTS)}")
+    try:
+        async for message in websocket:
+            pass
+    except websockets.exceptions.ConnectionClosed:
+        pass
+    finally:
+        CONNECTED_CLIENTS.remove(websocket)
+        logger.info(f"Dashboard disconnected. Total clients: {len(CONNECTED_CLIENTS)}")
+
 async def po_websocket_listener():
     import random
     logger.info("Starting Nigerian Time (WAT) 15-Second Signal Engine...")
@@ -77,23 +113,6 @@ async def po_websocket_listener():
         
         await broadcast_to_dashboards(payload)
 
-async def dashboard_socket_handler(websocket):
-    CONNECTED_CLIENTS.add(websocket)
-    logger.info(f"New Dashboard connected! Total clients: {len(CONNECTED_CLIENTS)}")
-    try:
-        async for message in websocket:
-            pass
-    except websockets.exceptions.ConnectionClosed:
-        pass
-    finally:
-        CONNECTED_CLIENTS.remove(websocket)
-        logger.info(f"Dashboard disconnected. Total clients: {len(CONNECTED_CLIENTS)}")
-
-def get_wat_time():
-    # West Africa Time (WAT) is UTC+1
-    wat_offset = datetime.timezone(datetime.timedelta(hours=1))
-    return datetime.datetime.now(wat_offset)
-
 async def main():
     port = int(os.environ.get("PORT", 8080))
     logger.info(f"Starting WebSocket Relay Server on port {port}...")
@@ -105,18 +124,4 @@ async def main():
     )
 
 if __name__ == "__main__":
-    import asyncio
-    import json
-    import logging
-    import os
-    import datetime
-    import websockets
-    import pandas as pd
-    import ta
-
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
-    logger = logging.getLogger("PO_Server")
-
-    CONNECTED_CLIENTS = set()
-    candle_history = []
     asyncio.run(main())
